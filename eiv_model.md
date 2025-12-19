@@ -11,12 +11,11 @@ output:
 ---
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+
 
 ## Simulation
-```{r simulate}
+
+``` r
 simulate_eiv_data <- function(n, beta, sigma_eta = 0.3, mu_x = -0.7, tau_x = 0.3, mu_y = -0.7, tau_y = 0.3) {
   x_true <- rnorm(n, 0, 1)
   eta <- rnorm(n, 0, sigma_eta)
@@ -38,7 +37,8 @@ dat <- simulate_eiv_data(n, true_beta, true_sigma_eta)
 ---
 
 ## Vectorized full likelihood with analytical gradients
-```{r vectorized_grad}
+
+``` r
 loglik_full_vec_grad <- function(par, data) {
   beta <- par[1]
   sigma_eta2 <- exp(par[2])
@@ -88,7 +88,8 @@ loglik_full_vec_grad <- function(par, data) {
 ---
 
 ## Fit the model
-```{r fit}
+
+``` r
 negloglik_vec_grad <- function(par, data) {
   val <- -loglik_full_vec_grad(par, data)
   attr(val, 'gradient') <- -attr(val, 'gradient')
@@ -107,9 +108,19 @@ res <- fit_full(negloglik_vec_grad, dat)
 ---
 
 ## Summary
-```{r summary}
+
+``` r
 cat(sprintf('True β = %.3f\nEstimated β = %.3f\nTrue σ_eta² = %.3f\nEstimated σ_eta² = %.3f\nLogLik = %.2f\nTime (s) = %.2f\n',
             true_beta, res$par[1], true_sigma_eta^2, exp(res$par[2]), res$ll, res$time))
+```
+
+```
+## True β = 2.000
+## Estimated β = 1.985
+## True σ_eta² = 0.090
+## Estimated σ_eta² = 0.084
+## LogLik = -2386.16
+## Time (s) = 0.09
 ```
 
 ---
