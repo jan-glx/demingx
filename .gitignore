@@ -1,0 +1,8 @@
+*.html
+*.Rproj
+.Rhistory
+.RData
+.Ruserdata
+.DS_Store
+*_cache/
+*.knit.md

@@ -1,0 +1,170 @@
+---
+title: "Full Likelihood EIV Model: Loop vs Vectorized vs Vectorized+Grad Benchmark"
+author: "aishell"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Simulation
+```{r simulate}
+simulate_eiv_data <- function(n, beta, sigma_eta = 0.3, mu_x = -0.7, tau_x = 0.3, mu_y = -0.7, tau_y = 0.3) {
+  x_true <- rnorm(n, 0, 1)
+  eta <- rnorm(n, 0, sigma_eta)
+  y_true <- beta * x_true + eta
+  s_x <- rlnorm(n, mu_x, tau_x)
+  s_y <- rlnorm(n, mu_y, tau_y)
+  x_obs <- x_true + rnorm(n, 0, s_x)
+  y_obs <- y_true + rnorm(n, 0, s_y)
+  data.frame(x_obs, y_obs, s_x, s_y)
+}
+
+set.seed(123)
+true_beta <- 2.0
+true_sigma_eta <- 0.3
+n <- 2000
+dat <- simulate_eiv_data(n, true_beta, true_sigma_eta)
+```
+
+---
+
+## 1️⃣ Loop-based likelihood (with gradients)
+```{r loop}
+loglik_full_loop <- function(par, data) {
+  beta <- par[1]
+  sigma_eta2 <- exp(par[2])
+  x <- data$x_obs; y <- data$y_obs
+  sx2 <- data$s_x^2; sy2 <- data$s_y^2
+  n <- length(x)
+  ll <- 0; grad <- c(0, 0)
+  for (i in seq_len(n)) {
+    S <- matrix(c(1 + sx2[i], beta, beta, beta^2 + sigma_eta2 + sy2[i]), 2, 2)
+    Sinv <- solve(S); detS <- det(S)
+    xy <- c(x[i], y[i])
+    q <- t(xy) %*% Sinv %*% xy
+    ll <- ll - 0.5 * (log(detS) + q)
+    dS_db <- matrix(c(0,1,1,2*beta),2,2)
+    dS_ds <- matrix(c(0,0,0,1),2,2)
+    A <- Sinv %*% dS_db %*% Sinv
+    B <- Sinv %*% dS_ds %*% Sinv
+    grad[1] <- grad[1] + 0.5 * (t(xy) %*% A %*% xy - sum(diag(Sinv %*% dS_db)))
+    grad[2] <- grad[2] + 0.5 * (t(xy) %*% B %*% xy - sum(diag(Sinv %*% dS_ds)))
+  }
+  attr(ll, 'gradient') <- grad
+  ll
+}
+```
+
+---
+
+## 2️⃣ Vectorized likelihood (no gradients)
+```{r vectorized}
+loglik_full_vec <- function(par, data) {
+  beta <- par[1]
+  sigma_eta2 <- exp(par[2])
+  x <- data$x_obs; y <- data$y_obs
+  sx2 <- data$s_x^2; sy2 <- data$s_y^2
+
+  a11 <- 1 + sx2
+  a12 <- rep(beta, length(x))
+  a22 <- beta^2 + sigma_eta2 + sy2
+  detS <- a11 * a22 - a12^2
+
+  Sinv11 <-  a22 / detS
+  Sinv22 <-  a11 / detS
+  Sinv12 <- -a12 / detS
+
+  q <- Sinv11 * x^2 + 2 * Sinv12 * x * y + Sinv22 * y^2
+  ll <- -0.5 * sum(log(detS) + q)
+  attr(ll, 'gradient') <- c(0, 0)
+  ll
+}
+```
+
+---
+
+## 3️⃣ Vectorized likelihood (with gradients)
+```{r vectorized_grad}
+loglik_full_vec_grad <- function(par, data) {
+  beta <- par[1]
+  sigma_eta2 <- exp(par[2])
+  x <- data$x_obs; y <- data$y_obs
+  sx2 <- data$s_x^2; sy2 <- data$s_y^2
+  n <- length(x)
+
+  a11 <- 1 + sx2
+  a12 <- rep(beta, n)
+  a22 <- beta^2 + sigma_eta2 + sy2
+  detS <- a11 * a22 - a12^2
+
+  Sinv11 <-  a22 / detS
+  Sinv22 <-  a11 / detS
+  Sinv12 <- -a12 / detS
+
+  q <- Sinv11 * x^2 + 2 * Sinv12 * x * y + Sinv22 * y^2
+  ll <- -0.5 * sum(log(detS) + q)
+
+  # Derivatives of Σ wrt beta and sigma_eta2
+  dS_db_11 <- rep(0, n)
+  dS_db_12 <- rep(1, n)
+  dS_db_22 <- 2 * beta
+  dS_ds_11 <- rep(0, n)
+  dS_ds_12 <- rep(0, n)
+  dS_ds_22 <- rep(1, n)
+
+  # Trace terms tr(Sinv * dS/dθ)
+  trA_db <- Sinv11 * dS_db_11 + 2 * Sinv12 * dS_db_12 + Sinv22 * dS_db_22
+  trA_ds <- Sinv11 * dS_ds_11 + 2 * Sinv12 * dS_ds_12 + Sinv22 * dS_ds_22
+
+  # (x,y)A dS A(x,y)' terms
+  Ax <- Sinv11 * x + Sinv12 * y
+  Ay <- Sinv12 * x + Sinv22 * y
+
+  tmp_db <- dS_db_11 * Ax^2 + 2 * dS_db_12 * Ax * Ay + dS_db_22 * Ay^2
+  tmp_ds <- dS_ds_11 * Ax^2 + 2 * dS_ds_12 * Ax * Ay + dS_ds_22 * Ay^2
+
+  grad_beta <- 0.5 * sum(tmp_db - trA_db)
+  grad_sigma <- 0.5 * sum(tmp_ds - trA_ds)
+
+  attr(ll, 'gradient') <- c(grad_beta, grad_sigma)
+  ll
+}
+```
+
+---
+
+## Benchmark all three versions
+```{r benchmark}
+negloglik_loop <- function(par, data) { val <- -loglik_full_loop(par, data); attr(val,'gradient') <- -attr(val,'gradient'); val }
+negloglik_vec <- function(par, data) { val <- -loglik_full_vec(par, data); attr(val,'gradient') <- -attr(val,'gradient'); val }
+negloglik_vec_grad <- function(par, data) { val <- -loglik_full_vec_grad(par, data); attr(val,'gradient') <- -attr(val,'gradient'); val }
+
+fit_full <- function(fn, data) {
+  start <- c(1, log(var(data$y_obs)))
+  system.time({ opt <- optim(start, fn, data = data, method='BFGS', hessian=TRUE) }) -> t
+  list(par = opt$par, time = t['elapsed'], ll = -opt$value)
+}
+
+res_loop <- fit_full(negloglik_loop, dat)
+res_vec <- fit_full(negloglik_vec, dat)
+res_vec_grad <- fit_full(negloglik_vec_grad, dat)
+
+comparison <- data.frame(
+  Version = c('Loop', 'Vectorized', 'Vectorized+Grad'),
+  Beta = c(res_loop$par[1], res_vec$par[1], res_vec_grad$par[1]),
+  Sigma_eta2 = exp(c(res_loop$par[2], res_vec$par[2], res_vec_grad$par[2])),
+  LogLik = c(res_loop$ll, res_vec$ll, res_vec_grad$ll),
+  Time_sec = c(res_loop$time, res_vec$time, res_vec_grad$time)
+)
+comparison
+```
+
+---
+
+## Summary
+```{r summary}
+cat(sprintf('True β = %.3f\nTrue σ_eta² = %.3f\n', true_beta, true_sigma_eta^2))
+comparison
+```
