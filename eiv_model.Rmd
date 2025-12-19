@@ -1,7 +1,14 @@
 ---
 title: "Full Likelihood EIV Model (Vectorized + Analytical Gradients Only)"
 author: "aishell"
-output: html_document
+output:
+  html_document:
+    keep_md: true
+  github_document: default
+---
+  html_document: default
+  github_document: default
+---
 ---
 
 ```{r setup, include=FALSE}
@@ -71,7 +78,7 @@ loglik_full_vec_grad <- function(par, data) {
   tmp_ds <- dS_ds_11 * Ax^2 + 2 * dS_ds_12 * Ax * Ay + dS_ds_22 * Ay^2
 
   grad_beta <- 0.5 * sum(tmp_db - trA_db)
-  grad_sigma <- 0.5 * sum(tmp_ds - trA_ds)
+  grad_sigma <- 0.5 * sum(tmp_ds - trA_ds) * sigma_eta2
 
   attr(ll, 'gradient') <- c(grad_beta, grad_sigma)
   ll
