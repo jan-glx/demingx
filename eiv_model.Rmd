@@ -1,5 +1,5 @@
 ---
-title: "Full Likelihood EIV Model: Analytical vs Numerical Gradient Benchmark"
+title: "Full Likelihood EIV Model: Analytical vs Numerical Gradient Benchmark (bench::mark)"
 author: "aishell"
 output:
   html_document:
@@ -59,7 +59,6 @@ loglik_full_vec_grad <- function(par, data, compute_grad = TRUE) {
     return(ll)
   }
 
-  # Derivatives wrt beta and sigma_eta2
   dS_db_11 <- rep(0, n)
   dS_db_12 <- rep(1, n)
   dS_db_22 <- 2 * beta
@@ -67,11 +66,9 @@ loglik_full_vec_grad <- function(par, data, compute_grad = TRUE) {
   dS_ds_12 <- rep(0, n)
   dS_ds_22 <- rep(1, n)
 
-  # Trace terms tr(Sinv * dS/dθ)
   trA_db <- Sinv11 * dS_db_11 + 2 * Sinv12 * dS_db_12 + Sinv22 * dS_db_22
   trA_ds <- Sinv11 * dS_ds_11 + 2 * Sinv12 * dS_ds_12 + Sinv22 * dS_ds_22
 
-  # (x,y)A dS A(x,y)' terms
   Ax <- Sinv11 * x + Sinv12 * y
   Ay <- Sinv12 * x + Sinv22 * y
 
@@ -88,7 +85,8 @@ loglik_full_vec_grad <- function(par, data, compute_grad = TRUE) {
 
 ---
 
-## Fitting function and benchmark
+
+## Fitting function
 ```{r fit}
 negloglik_vec_grad <- function(par, data, compute_grad = TRUE) {
   val <- -loglik_full_vec_grad(par, data, compute_grad)
@@ -98,29 +96,24 @@ negloglik_vec_grad <- function(par, data, compute_grad = TRUE) {
 
 fit_full <- function(fn, data, use_grad = TRUE) {
   start <- c(1, log(var(data$y_obs)))
-  system.time({
-    opt <- optim(start, fn, data = data, method = 'BFGS', hessian = TRUE, compute_grad = use_grad)
-  }) -> t
-  list(par = opt$par, time = t['elapsed'], ll = -opt$value)
+  optim(start, fn, data = data, method = 'BFGS', hessian = TRUE, compute_grad = use_grad)
 }
 
-res_grad <- fit_full(negloglik_vec_grad, dat, use_grad = TRUE)
-res_nograd <- fit_full(negloglik_vec_grad, dat, use_grad = FALSE)
+if (!requireNamespace('bench', quietly = TRUE)) install.packages('bench', repos='https://cloud.r-project.org')
+library(bench)
 
-comparison <- data.frame(
-  Version = c('Analytical Gradient', 'Numerical Gradient'),
-  Beta = c(res_grad$par[1], res_nograd$par[1]),
-  Sigma_eta2 = exp(c(res_grad$par[2], res_nograd$par[2])),
-  LogLik = c(res_grad$ll, res_nograd$ll),
-  Time_sec = c(res_grad$time, res_nograd$time)
+bench_results <- bench::mark(
+  Analytical = fit_full(negloglik_vec_grad, dat, use_grad = TRUE),
+  Numerical  = fit_full(negloglik_vec_grad, dat, use_grad = FALSE),
+  iterations = 3,
+  check = FALSE
 )
-comparison
+bench_results
 ```
 
 ---
 
 ## Summary
 ```{r summary}
-cat(sprintf('True β = %.3f\nTrue σ_eta² = %.3f\n', true_beta, true_sigma_eta^2))
-comparison
+summary(bench_results)
 ```
