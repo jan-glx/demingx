@@ -1,14 +1,10 @@
 ---
-title: "Full Likelihood EIV Model (Vectorized + Analytical Gradients Only)"
+title: "Full Likelihood EIV Model: Analytical vs Numerical Gradient Benchmark"
 author: "aishell"
 output:
   html_document:
     keep_md: true
   github_document: default
----
-  html_document: default
-  github_document: default
----
 ---
 
 ```{r setup, include=FALSE}
@@ -37,9 +33,9 @@ dat <- simulate_eiv_data(n, true_beta, true_sigma_eta)
 
 ---
 
-## Vectorized full likelihood with analytical gradients
+## Vectorized full likelihood with optional analytical gradients
 ```{r vectorized_grad}
-loglik_full_vec_grad <- function(par, data) {
+loglik_full_vec_grad <- function(par, data, compute_grad = TRUE) {
   beta <- par[1]
   sigma_eta2 <- exp(par[2])
   x <- data$x_obs; y <- data$y_obs
@@ -58,7 +54,12 @@ loglik_full_vec_grad <- function(par, data) {
   q <- Sinv11 * x^2 + 2 * Sinv12 * x * y + Sinv22 * y^2
   ll <- -0.5 * sum(log(detS) + q)
 
-  # Derivatives of Σ wrt beta and sigma_eta2
+  if (!compute_grad) {
+    attr(ll, 'gradient') <- NULL
+    return(ll)
+  }
+
+  # Derivatives wrt beta and sigma_eta2
   dS_db_11 <- rep(0, n)
   dS_db_12 <- rep(1, n)
   dS_db_22 <- 2 * beta
@@ -87,33 +88,39 @@ loglik_full_vec_grad <- function(par, data) {
 
 ---
 
-## Fit the model
+## Fitting function and benchmark
 ```{r fit}
-negloglik_vec_grad <- function(par, data) {
-  val <- -loglik_full_vec_grad(par, data)
-  attr(val, 'gradient') <- -attr(val, 'gradient')
+negloglik_vec_grad <- function(par, data, compute_grad = TRUE) {
+  val <- -loglik_full_vec_grad(par, data, compute_grad)
+  if (compute_grad) attr(val, 'gradient') <- -attr(val, 'gradient')
   val
 }
 
-fit_full <- function(fn, data) {
+fit_full <- function(fn, data, use_grad = TRUE) {
   start <- c(1, log(var(data$y_obs)))
-  system.time({ opt <- optim(start, fn, data = data, method='BFGS', hessian=TRUE) }) -> t
+  system.time({
+    opt <- optim(start, fn, data = data, method = 'BFGS', hessian = TRUE, compute_grad = use_grad)
+  }) -> t
   list(par = opt$par, time = t['elapsed'], ll = -opt$value)
 }
 
-res <- fit_full(negloglik_vec_grad, dat)
+res_grad <- fit_full(negloglik_vec_grad, dat, use_grad = TRUE)
+res_nograd <- fit_full(negloglik_vec_grad, dat, use_grad = FALSE)
+
+comparison <- data.frame(
+  Version = c('Analytical Gradient', 'Numerical Gradient'),
+  Beta = c(res_grad$par[1], res_nograd$par[1]),
+  Sigma_eta2 = exp(c(res_grad$par[2], res_nograd$par[2])),
+  LogLik = c(res_grad$ll, res_nograd$ll),
+  Time_sec = c(res_grad$time, res_nograd$time)
+)
+comparison
 ```
 
 ---
 
 ## Summary
 ```{r summary}
-cat(sprintf('True β = %.3f\nEstimated β = %.3f\nTrue σ_eta² = %.3f\nEstimated σ_eta² = %.3f\nLogLik = %.2f\nTime (s) = %.2f\n',
-            true_beta, res$par[1], true_sigma_eta^2, exp(res$par[2]), res$ll, res$time))
+cat(sprintf('True β = %.3f\nTrue σ_eta² = %.3f\n', true_beta, true_sigma_eta^2))
+comparison
 ```
-
----
-
-
----
-
