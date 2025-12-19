@@ -104,3 +104,39 @@ res <- fit_full(negloglik_vec_grad, dat)
 cat(sprintf('True β = %.3f\nEstimated β = %.3f\nTrue σ_eta² = %.3f\nEstimated σ_eta² = %.3f\nLogLik = %.2f\nTime (s) = %.2f\n',
             true_beta, res$par[1], true_sigma_eta^2, exp(res$par[2]), res$ll, res$time))
 ```
+
+---
+
+
+---
+
+## Gradient verification (multiple points)
+```{r gradcheck}
+if (!requireNamespace('numDeriv', quietly = TRUE)) install.packages('numDeriv', repos='https://cloud.r-project.org')
+library(numDeriv)
+
+# Define parameter points to test
+test_points <- rbind(
+  c(1, log(var(dat$y_obs))),
+  res$par,
+  c(res$par[1] - 0.5, res$par[2] - 0.3),
+  c(res$par[1] + 0.5, res$par[2] + 0.3),
+  c(res$par[1] * 0.8, res$par[2] * 1.2)
+)
+rownames(test_points) <- c('Start','MLE','Low','High','Scaled')
+
+compare_grad <- function(p) {
+  num <- grad(function(q) -loglik_full_vec_grad(q, dat), p)
+  ana <- -attr(loglik_full_vec_grad(p, dat), 'gradient')
+  data.frame(Numerical = num, Analytical = ana, Diff = num - ana)
+}
+
+grad_results <- lapply(1:nrow(test_points), function(i) {
+  p <- test_points[i,]
+  data.frame(Point = rownames(test_points)[i], Parameter = c('beta','log_sigma_eta2'), compare_grad(p))
+})
+
+grad_table <- do.call(rbind, grad_results)
+grad_table
+```
+EOF2
