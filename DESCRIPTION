@@ -1,0 +1,12 @@
+Package: demingx
+Type: Package
+Title: Extended Heteroscedastic Deming Regression
+Version: 0.1.0
+Authors@R: person('Jan Gleixner', email = 'jan.gleixner+FOSS@gmail.com', role = c('aut', 'cre'))
+Description: Provides functions to fit a slope-only heteroscedastic errors-in-variables model, generalizing classical Deming regression by allowing known per-observation variances and intrinsic scatter estimation.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Depends: R (>= 4.0)
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
