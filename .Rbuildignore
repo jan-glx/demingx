@@ -3,3 +3,7 @@
 ^\.Rproj\.user$
 ^LICENSE\.md$
 
+^\.github$
+
+.gitconfig
+.cache
