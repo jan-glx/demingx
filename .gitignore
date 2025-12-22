@@ -6,3 +6,4 @@
 .DS_Store
 *_cache/
 *.knit.md
+inst/doc

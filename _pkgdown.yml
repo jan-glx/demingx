@@ -4,9 +4,10 @@ template:
     bootswatch: flatly
 
 repo:
-  url: https://github.com/jan-glx/demingx
-  branch: master
-  subdir: .
+  home: https://github.com/jan-glx/demingx
+  issue: https://github.com/jan-glx/demingx/issues
+  user: jan-glx
+  repo: demingx
 
 navbar:
   structure:
