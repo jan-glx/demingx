@@ -23,10 +23,6 @@ repo:
   user: jan-glx
   repo: demingx
 
-navbar:
-  structure:
-    right: [github]
-  components:
     github:
       icon: fa-github
       href: https://github.com/jan-glx/demingx
