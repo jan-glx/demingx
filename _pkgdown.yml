@@ -1,21 +1,10 @@
 url: https://jan.gleixner.xyz/demingx
+
 template:
   bootstrap: 5
   params:
     bootswatch: flatly
 
-  structure:
-    right: [github]
-  components:
-    github:
-      icon: fa-github
-      href: https://github.com/jan-glx/demingx
-  structure:
-    right: [github]
-  components:
-    github:
-      icon: fa-github
-      href: https://github.com/jan-glx/demingx
 repo:
   home: https://github.com/jan-glx/demingx
   source: https://github.com/jan-glx/demingx/blob/HEAD/
@@ -23,6 +12,10 @@ repo:
   user: jan-glx
   repo: demingx
 
+navbar:
+  structure:
+    right: [github]
+  components:
     github:
       icon: fa-github
       href: https://github.com/jan-glx/demingx
