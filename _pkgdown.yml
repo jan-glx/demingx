@@ -4,8 +4,21 @@ template:
   params:
     bootswatch: flatly
 
+  structure:
+    right: [github]
+  components:
+    github:
+      icon: fa-github
+      href: https://github.com/jan-glx/demingx
+  structure:
+    right: [github]
+  components:
+    github:
+      icon: fa-github
+      href: https://github.com/jan-glx/demingx
 repo:
   home: https://github.com/jan-glx/demingx
+  source: https://github.com/jan-glx/demingx/blob/HEAD/
   issue: https://github.com/jan-glx/demingx/issues
   user: jan-glx
   repo: demingx
