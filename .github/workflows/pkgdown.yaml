@@ -25,7 +25,7 @@ jobs:
 
     - name: Install R packages
       run: |
-        install.packages(c("devtools", "pkgdown"))
+        install.packages(c("pkgdown", "ragg", "textshaping", "systemfonts"))
       shell: Rscript {0}
 
     - name: Build site
