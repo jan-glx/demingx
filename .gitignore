@@ -7,3 +7,6 @@
 *_cache/
 *.knit.md
 inst/doc
+docs/*
+.cache/*
+

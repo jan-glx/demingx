@@ -14,4 +14,4 @@ Suggests:
     knitr,
     rmarkdown
 VignetteBuilder: knitr
-URL: https://jan.gleixner.xyz/demingx
+URL: https://github.com/jan-glx/demingx , https://jan.gleixner.xyz/demingx

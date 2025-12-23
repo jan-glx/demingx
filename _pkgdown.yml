@@ -5,16 +5,6 @@ template:
   params:
     bootswatch: flatly
 
-repo:
-  home: https://github.com/jan-glx/demingx
-  source: https://github.com/jan-glx/demingx/blob/HEAD/
-  issue: https://github.com/jan-glx/demingx/issues
-  edit:
-    article: https://github.com/jan-glx/demingx/edit/HEAD/vignettes/%s
-    reference: https://github.com/jan-glx/demingx/edit/HEAD/R/%s
-  user: jan-glx
-  repo: demingx
-
 navbar:
   structure:
     right: [github]
